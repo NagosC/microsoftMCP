@@ -2,60 +2,49 @@
 
 Este projeto é um servidor **MCP (Model Context Protocol)** que atua como uma ponte entre um assistente de IA e a **API do Microsoft Graph**. Ele expõe um conjunto de ferramentas que permitem à IA interagir com serviços da Microsoft, como SharePoint, OneDrive e Excel, de forma programática e segura.
 
-## 🚀 Começando: A Maneira Mais Fácil
+## 🚀 Começando: A Maneira Mais Fácil (com Docker)
 
-A forma mais simples de usar o servidor é com `uvx`, que o executa em um ambiente isolado diretamente do GitHub.
+A forma mais simples e recomendada de executar o servidor é com Docker e Docker Compose.
 
-### Pré-requisitos
+### 1. Pré-requisitos
 
-- Você precisa de um **ID de Cliente (Client ID)** de um aplicativo registrado no Microsoft Azure. Se não tiver um, siga as instruções em **Apêndice A**.
+- **Docker** e **Docker Compose** instalados.
+- Um **ID de Cliente (Client ID)** de um aplicativo registrado no Microsoft Azure. Se não tiver um, siga as instruções em **Apêndice A**.
 
-### Execução
+### 2. Configuração
 
-Execute o comando abaixo no seu terminal, substituindo `"seu-client-id-aqui"` pelo seu ID de Cliente.
+1.  **Clone o repositório:**
+    ```bash
+    git clone https://github.com/NagosC/microsoftMCP.git
+    cd microsoftMCP
+    ```
+2.  **Crie um arquivo `.env`**:
+    Copie o arquivo de exemplo `.env.example` para um novo arquivo chamado `.env`.
+    ```bash
+    cp .env.example .env
+    ```
+3.  **Preencha o arquivo `.env`**:
+    Abra o arquivo `.env` e adicione seu `GRAPH_CLIENT_ID` e outras credenciais que desejar.
+
+### 3. Executando o Servidor
+
+Inicie o servidor com um único comando:
 
 ```bash
-uvx --from https://github.com/NagosC/microsoftMCP.git microsoft-mcp
+docker compose up --build -d
 ```
 
-- **Para Ambientes de IA (como o Gemini):**
-  Você pode configurar a ferramenta para ser executada com o `CLIENT_ID` como uma variável de ambiente.
+O servidor estará rodando em segundo plano e acessível em `http://localhost:8000`.
 
-  ```json
-  {
-      "microsoft": {
-          "command": "uvx",
-          "args": [
-              "--from",
-              "https://github.com/NagosC/microsoftMCP.git",
-              "microsoft-mcp"
-          ],
-          "env": {
-              "MICROSOFT_MCP_CLIENT_ID": "seu-client-id-aqui"
-          }
-      }
-  }
-  ```
+### 4. Autenticação da Conta Microsoft
 
-### Autenticação da Conta Microsoft
+Para autenticar uma nova conta Microsoft, execute o script de autenticação dentro do container:
 
-Após iniciar o servidor, você precisa autorizar o acesso à sua conta Microsoft.
+```bash
+docker compose exec server poetry run microsoft-mcp-auth
+```
 
-1.  **Inicie a autenticação**:
-    ```bash
-    authenticate_account()
-    ```
-2.  **Código de Dispositivo**: O sistema fornecerá uma URL e um código.
-    - Abra a URL no seu navegador.
-    - Insira o código fornecido.
-    - Faça login com sua conta da Microsoft e aprove o acesso.
-3.  **Complete a autenticação**:
-    ```bash
-    complete_authentication(flow_cache="...")
-    ```
-    Use o `flow_cache` retornado pelo passo anterior.
-
-Com a conta autenticada, você já pode usar todas as ferramentas disponíveis.
+Siga as instruções no terminal para abrir a URL, inserir o código e autorizar o acesso.
 
 ---
 
@@ -80,7 +69,7 @@ Se você deseja modificar ou contribuir com o projeto, siga estes passos.
     ```bash
     poetry install
     ```
-3.  **Crie um arquivo `.env`** na raiz do projeto e adicione seu Client ID:
+3.  **Crie um arquivo `.env`** na raiz do projeto (pode copiar do `.env.example`) e adicione seu Client ID:
     ```env
     # Cole o ID do Aplicativo (cliente) que você copiou do portal do Azure
     GRAPH_CLIENT_ID="seu-client-id-aqui"
@@ -91,7 +80,7 @@ Se você deseja modificar ou contribuir com o projeto, siga estes passos.
 Antes de iniciar o servidor, autentique sua conta Microsoft:
 
 ```bash
-poetry run python src/autentichate.py
+poetry run microsoft-mcp-auth
 ```
 
 Siga as instruções no terminal para gerar o arquivo de token (`~/.microsoft_mcp_token_cache.json`).
@@ -101,7 +90,7 @@ Siga as instruções no terminal para gerar o arquivo de token (`~/.microsoft_mc
 Inicie o servidor MCP em modo de desenvolvimento:
 
 ```bash
-poetry run python -m src.microsoft_mcp.server
+poetry run microsoft-mcp
 ```
 
 ### 5. Comandos Úteis
