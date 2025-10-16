@@ -102,6 +102,69 @@ O servidor estará em execução e pronto para receber chamadas de um cliente MC
 
 ---
 
+##  utilização
+
+A maneira mais simples de executar o servidor é usando `uvx`, que o instalará e executará diretamente do repositório do GitHub.
+
+### Executando com `uvx`
+
+Este comando irá baixar e executar o servidor em um ambiente isolado, passando o `CLIENT_ID` necessário como uma variável de ambiente.
+
+```bash
+uvx --from https://github.com/NagosC/microsoftMCP.git microsoft-mcp
+```
+
+Ao executar o comando, você precisará fornecer o `MICROSOFT_MCP_CLIENT_ID` que você obteve ao registrar o aplicativo no Azure.
+
+```json
+{
+    "microsoft": {
+        "command": "uvx",
+        "args": [
+            "--from",
+            "https://github.com/NagosC/microsoftMCP.git",
+            "microsoft-mcp"
+        ],
+        "env": {
+            "MICROSOFT_MCP_CLIENT_ID": "seu-client-id-aqui"
+        }
+    }
+}
+```
+
+### Autenticando uma Conta
+
+Após iniciar o servidor, você precisará autenticar sua conta da Microsoft.
+
+1.  **Listar Contas**: Verifique as contas já autenticadas.
+    
+    ```bash
+    list_accounts()
+    ```
+    
+2.  **Iniciar Autenticação**: Comece o processo para adicionar uma nova conta.
+    
+    ```bash
+    authenticate_account()
+    ```
+    
+3.  **Código de Dispositivo**: O sistema fornecerá uma URL e um código.
+    
+    -   Abra a URL no seu navegador.
+    -   Insira o código fornecido.
+    -   Faça login com sua conta da Microsoft.
+    
+4.  **Completar Autenticação**: Finalize o processo usando o `flow_cache` retornado.
+    
+    ```bash
+    complete_authentication(flow_cache="...")
+    ```
+    
+
+Com a conta autenticada, você pode usar as outras ferramentas para interagir com o SharePoint, OneDrive e Excel.
+
+---
+
 ## ⚡ Execução Direta do GitHub (Avançado)
 
 Se você deseja executar o servidor sem clonar o repositório, pode usar uma ferramenta como o `pipx`. Isso é ideal para integrar o servidor a outros sistemas de forma rápida.
@@ -138,11 +201,6 @@ Aqui está a lista de ferramentas que o servidor expõe.
 
 ### SharePoint e OneDrive
 
-- **`sharepoint_get_site(hostname: str, relative_path: str)`**: Obtém detalhes de um site do SharePoint.
-- **`sharepoint_list_drives(site_id: str)`**: Lista as bibliotecas de documentos (Drives) de um site.
-- **`sharepoint_list_files(drive_id: str, item_id: str | None = None)`**: Lista arquivos e pastas em um Drive ou pasta específica.
-- **`sharepoint_download_file(drive_id: str, item_id: str)`**: Baixa o conteúdo de um arquivo (retorna em base64).
-- **`sharepoint_upload_file(drive_id: str, parent_id: str, filename: str, content_b64: str)`**: Faz upload de um arquivo pequeno (< 4MB).
 - **`sharepoint_get_site(hostname: str, relative_path: str, account_id: str | None = None)`**: Obtém detalhes de um site do SharePoint.
 - **`sharepoint_list_drives(site_id: str, account_id: str | None = None)`**: Lista as bibliotecas de documentos (Drives) de um site.
 - **`sharepoint_list_files(drive_id: str, item_id: str | None = None, account_id: str | None = None)`**: Lista arquivos e pastas em um Drive ou pasta específica.
@@ -151,11 +209,6 @@ Aqui está a lista de ferramentas que o servidor expõe.
 
 ### Excel
 
-- **`excel_list_worksheets(drive_id: str, item_id: str)`**: Lista todas as planilhas em um arquivo Excel.
-- **`excel_list_tables(drive_id: str, item_id: str, worksheet_name: str)`**: Lista todas as tabelas formatadas em uma planilha.
-- **`excel_read_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str)`**: Lê dados de um intervalo (ex: "A1:C5" ou "NomeDaTabela").
-- **`excel_update_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, values: list[list])`**: Atualiza um intervalo de células com novos valores.
-- **`excel_add_table_row(drive_id: str, item_id: str, worksheet_name: str, table_name: str, values: list[list])`**: Adiciona uma ou mais linhas ao final de uma tabela.
 - **`excel_list_worksheets(drive_id: str, item_id: str, account_id: str | None = None)`**: Lista todas as planilhas em um arquivo Excel.
 - **`excel_list_tables(drive_id: str, item_id: str, worksheet_name: str, account_id: str | None = None)`**: Lista todas as tabelas formatadas em uma planilha.
 - **`excel_read_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, account_id: str | None = None)`**: Lê dados de um intervalo (ex: "A1:C5" ou "NomeDaTabela").

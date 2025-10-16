@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CACHE_FILE = pl.Path.home() / ".microsoft_mcp_token_cache.json"
+CONFIG_DIR = pl.Path.home() / ".microsoft-mcp"
+TOKEN_CACHE_FILE = CONFIG_DIR / "token_cache.json"
 SCOPES = ["https://graph.microsoft.com/.default"]
 
 
@@ -16,21 +17,42 @@ class Account(NamedTuple):
 
 
 def _read_cache() -> str | None:
+    """Reads the MSAL token cache from the filesystem."""
     try:
-        return CACHE_FILE.read_text()
+        return TOKEN_CACHE_FILE.read_text()
     except FileNotFoundError:
         return None
 
 
 def _write_cache(content: str) -> None:
-    CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CACHE_FILE.write_text(content)
+    """Writes the MSAL token cache to the filesystem."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    TOKEN_CACHE_FILE.write_text(content)
+
+
+def get_client_id() -> str:
+    """
+    Retrieves the Client ID from environment variables or a cached config file.
+    Priority:
+    1. MICROSOFT_MCP_CLIENT_ID environment variable.
+    2. 'client_id' field in ~/.microsoft-mcp/config.json.
+    """
+    client_id = os.getenv("MICROSOFT_MCP_CLIENT_ID")
+    if client_id:
+        return client_id
+
+    config_file = CONFIG_DIR / "config.json"
+    if config_file.exists():
+        config = json.loads(config_file.read_text())
+        client_id = config.get("client_id")
+        if client_id:
+            return client_id
+
+    raise ValueError("MICROSOFT_MCP_CLIENT_ID is not set as an environment variable or configured via the 'set_client_id' tool.")
 
 
 def get_app() -> msal.PublicClientApplication:
-    client_id = os.getenv("GRAPH_CLIENT_ID")
-    if not client_id:
-        raise ValueError("GRAPH_CLIENT_ID environment variable is required")
+    client_id = get_client_id()
 
     tenant_id = os.getenv("GRAPH_TENANT_ID", "common")
     authority = f"https://login.microsoftonline.com/{tenant_id}"
@@ -100,7 +122,6 @@ def list_accounts() -> list[Account]:
 def authenticate_new_account() -> Account | None:
     """Authenticate a new account interactively"""
     app = get_app()
-
     flow = app.initiate_device_flow(scopes=SCOPES)
     if "user_code" not in flow:
         raise Exception(

@@ -18,10 +18,13 @@ load_dotenv()
 
 
 def main():
-    if not os.getenv("GRAPH_CLIENT_ID"):
-        print("Error: GRAPH_CLIENT_ID environment variable is required")
+    try:
+        auth.get_client_id()
+    except ValueError as e:
+        print(f"Error: {e}")
         print("\nPlease set it in your .env file or environment:")
-        print("export GRAPH_CLIENT_ID='your-app-id'")
+        print("export MICROSOFT_MCP_CLIENT_ID='your-app-id'")
+        print("Alternatively, run the server and use the 'set_client_id' tool.")
         sys.exit(1)
 
     print("Microsoft MCP Authentication")

@@ -1,14 +1,15 @@
 import os
 import sys
-from .tools import mcp
+from . import auth
+from .tools import mcp # noqa
 
 
 def main() -> None:
-    if not os.getenv("MICROSOFT_MCP_CLIENT_ID"):
-        print(
-            "Error: MICROSOFT_MCP_CLIENT_ID environment variable is required",
-            file=sys.stderr,
-        )
+    try:
+        auth.get_client_id()
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        print("\nHint: Set the MICROSOFT_MCP_CLIENT_ID environment variable, or use the 'set_client_id' tool.", file=sys.stderr)
         sys.exit(1)
 
     mcp.run()

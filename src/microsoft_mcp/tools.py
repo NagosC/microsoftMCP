@@ -1,12 +1,47 @@
 import base64
 import datetime as dt
 import json
+import os
 import pathlib as pl
 from typing import Any
-from fastmcp import FastMCP
+
+from fastmcp import FastMCP, auth as mcp_auth
+
 from . import graph, auth
 
-mcp = FastMCP("microsoft-mcp")
+tenant_id = os.getenv("GRAPH_TENANT_ID", "common")
+
+oauth_config = mcp_auth.OAuth2(
+    authorization_url=f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize",
+    token_url=f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
+    scopes=auth.SCOPES,
+)
+
+mcp = FastMCP("microsoft-mcp", auth=oauth_config)
+
+
+@mcp.tool
+def set_client_id(client_id: str) -> dict[str, str]:
+    """
+    Sets and caches the Microsoft Application (Client) ID for this server.
+
+    This ID will be stored locally and used for all subsequent authentication requests,
+    removing the need to set the MICROSOFT_MCP_CLIENT_ID environment variable.
+
+    Args:
+        client_id: The Application (Client) ID from your Azure App Registration.
+    """
+    config_dir = auth.CONFIG_DIR
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_file = config_dir / "config.json"
+
+    config = {"client_id": client_id}
+    config_file.write_text(json.dumps(config, indent=2))
+
+    # Attempt to get the app to validate the new client_id
+    auth.get_app()
+
+    return {"status": "success", "message": f"Client ID successfully set and cached at {config_file}"}
 
 @mcp.tool
 def list_accounts() -> list[dict[str, str]]:
