@@ -1,0 +1,31 @@
+# Arquivos de Ambiente
+# Contém segredos e configurações locais. NUNCA comitar!
+.env
+
+# Ambientes Virtuais
+.venv/
+venv/
+env/
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Cache e relatórios de testes
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Artefatos de build e distribuição
+build/
+dist/
+*.egg-info/
+
+# Arquivos de configuração de IDEs
+.vscode/
+.idea/
+
+# Logs
+*.log
