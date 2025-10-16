@@ -143,6 +143,11 @@ Aqui está a lista de ferramentas que o servidor expõe.
 - **`sharepoint_list_files(drive_id: str, item_id: str | None = None)`**: Lista arquivos e pastas em um Drive ou pasta específica.
 - **`sharepoint_download_file(drive_id: str, item_id: str)`**: Baixa o conteúdo de um arquivo (retorna em base64).
 - **`sharepoint_upload_file(drive_id: str, parent_id: str, filename: str, content_b64: str)`**: Faz upload de um arquivo pequeno (< 4MB).
+- **`sharepoint_get_site(hostname: str, relative_path: str, account_id: str | None = None)`**: Obtém detalhes de um site do SharePoint.
+- **`sharepoint_list_drives(site_id: str, account_id: str | None = None)`**: Lista as bibliotecas de documentos (Drives) de um site.
+- **`sharepoint_list_files(drive_id: str, item_id: str | None = None, account_id: str | None = None)`**: Lista arquivos e pastas em um Drive ou pasta específica.
+- **`sharepoint_download_file(drive_id: str, item_id: str, account_id: str | None = None)`**: Baixa o conteúdo de um arquivo (retorna em base64).
+- **`sharepoint_upload_file(drive_id: str, parent_id: str, filename: str, content_b64: str, account_id: str | None = None)`**: Faz upload de um arquivo pequeno (< 4MB).
 
 ### Excel
 
@@ -151,6 +156,11 @@ Aqui está a lista de ferramentas que o servidor expõe.
 - **`excel_read_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str)`**: Lê dados de um intervalo (ex: "A1:C5" ou "NomeDaTabela").
 - **`excel_update_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, values: list[list])`**: Atualiza um intervalo de células com novos valores.
 - **`excel_add_table_row(drive_id: str, item_id: str, worksheet_name: str, table_name: str, values: list[list])`**: Adiciona uma ou mais linhas ao final de uma tabela.
+- **`excel_list_worksheets(drive_id: str, item_id: str, account_id: str | None = None)`**: Lista todas as planilhas em um arquivo Excel.
+- **`excel_list_tables(drive_id: str, item_id: str, worksheet_name: str, account_id: str | None = None)`**: Lista todas as tabelas formatadas em uma planilha.
+- **`excel_read_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, account_id: str | None = None)`**: Lê dados de um intervalo (ex: "A1:C5" ou "NomeDaTabela").
+- **`excel_update_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, values: list[list], account_id: str | None = None)`**: Atualiza um intervalo de células com novos valores.
+- **`excel_add_table_row(drive_id: str, item_id: str, worksheet_name: str, table_name: str, values: list[list], account_id: str | None = None)`**: Adiciona uma ou mais linhas ao final de uma tabela.
 
 > **Nota**: Todas as ferramentas aceitam um parâmetro opcional `account_id: str` para especificar qual conta autenticada usar. Se não for fornecido, a primeira conta da lista será usada como padrão.
 
