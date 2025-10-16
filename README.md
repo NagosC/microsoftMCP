@@ -1,236 +1,155 @@
- # Microsoft Graph MCP Server
+# Servidor MCP para Microsoft Graph
 
 Este projeto é um servidor **MCP (Model Context Protocol)** que atua como uma ponte entre um assistente de IA e a **API do Microsoft Graph**. Ele expõe um conjunto de ferramentas que permitem à IA interagir com serviços da Microsoft, como SharePoint, OneDrive e Excel, de forma programática e segura.
 
-## Funcionalidades
+## 🚀 Começando: A Maneira Mais Fácil
 
-- **Autenticação Segura**: Utiliza o fluxo de autenticação de dispositivo OAuth 2.0 para conectar contas da Microsoft de forma segura, armazenando tokens localmente.
-- **Manipulação de Arquivos**: Lista, baixa e faz upload de arquivos no SharePoint e OneDrive.
-- **Interação com SharePoint**: Obtém informações sobre sites e bibliotecas de documentos (Drives).
-- **Manipulação de Planilhas Excel**: Lista planilhas, lê e escreve em intervalos de células e adiciona linhas a tabelas formatadas.
+A forma mais simples de usar o servidor é com `uvx`, que o executa em um ambiente isolado diretamente do GitHub.
 
----
+### Pré-requisitos
 
-## 📋 Pré-requisitos
+- Você precisa de um **ID de Cliente (Client ID)** de um aplicativo registrado no Microsoft Azure. Se não tiver um, siga as instruções em **Apêndice A**.
 
-1.  **Python 3.10+**
-2.  **Poetry** para gerenciamento de dependências.
-3.  **Registro de Aplicativo no Azure**: Você precisa de um aplicativo registrado no Microsoft Azure para obter as credenciais da API.
+### Execução
 
----
-
-## ⚙️ Configuração e Instalação
-
-### 1. Registro do Aplicativo no Azure AD
-
-Para interagir com a API do Microsoft Graph, você precisa registrar um aplicativo no Azure Active Directory.
-
-1.  Acesse o portal do Azure e navegue até **Azure Active Directory**.
-2.  Vá para **Registros de aplicativo** e clique em **Novo registro**.
-3.  Dê um nome ao seu aplicativo (ex: `My-MCP-Server`).
-4.  Em **Tipos de conta com suporte**, selecione **Contas em qualquer diretório organizacional (Qualquer diretório do Azure AD – Multilocatário) e contas pessoais da Microsoft (por exemplo, Skype, Xbox)**.
-5.  Vá para a guia **Autenticação**, clique em **Adicionar uma plataforma** e selecione **Aplicativos móveis e de desktop**.
-6.  Marque a caixa para `https://login.microsoftonline.com/common/oauth2/nativeclient`.
-7.  Ainda em **Autenticação**, role para baixo até **Configurações avançadas** e ative a opção **Permitir fluxos de cliente público**.
-8.  Vá para **Permissões de API** e adicione as seguintes permissões delegadas:
-    - `Files.ReadWrite.All`
-    - `Sites.ReadWrite.All`
-    - `User.Read`
-    - `offline_access`
-9.  Na página de **Visão geral** do seu aplicativo, copie o **ID do aplicativo (cliente)**. Este será o seu `GRAPH_CLIENT_ID`.
-
-### 2. Configuração do Ambiente Local
-
-Clone o repositório e configure o ambiente.
-
-```bash
-# 1. Clone o repositório
-git clone <URL_DO_SEU_REPOSITORIO>
-cd projetoCmp
-
-# 2. Crie o arquivo .env
-# Copie o conteúdo abaixo para um novo arquivo chamado .env na raiz do projeto
-```
-
-**`.env`**
-```env
-# Cole o ID do Aplicativo (cliente) que você copiou do portal do Azure
-GRAPH_CLIENT_ID="seu-client-id-aqui"
-
-# (Opcional) Se você estiver usando um tenant específico, descomente e preencha.
-# Caso contrário, o padrão será 'common' (multilocatário).
-# GRAPH_TENANT_ID="seu-tenant-id-aqui"
-```
-
-### 3. Instalação das Dependências
-
-Use o Poetry para instalar todas as dependências listadas no `pyproject.toml`.
-
-```bash
-poetry install
-```
-
----
-
-## 🔑 Autenticação
-
-Antes de iniciar o servidor, você precisa autenticar as contas da Microsoft que deseja usar. Execute o script de autenticação interativo:
-
-```bash
-poetry run python src/autentichate.py
-```
-
-Siga as instruções no terminal:
-1.  O script perguntará se você deseja autenticar uma nova conta. Digite `y`.
-2.  Ele fornecerá uma URL e um código de dispositivo.
-3.  Abra a URL em um navegador, insira o código e faça login com a conta da Microsoft desejada.
-4.  Após a autenticação bem-sucedida, o script salvará o token de acesso no arquivo `~/.microsoft_mcp_token_cache.json`.
-
-Você pode repetir o processo para adicionar várias contas.
-
----
-
-## 🚀 Executando o Servidor
-
-Com as dependências instaladas e pelo menos uma conta autenticada, inicie o servidor MCP:
-
-```bash
-poetry run python -m src.microsoft_mcp.server
-```
-
-O servidor estará em execução e pronto para receber chamadas de um cliente MCP compatível.
-
----
-
-##  utilização
-
-A maneira mais simples de executar o servidor é usando `uvx`, que o instalará e executará diretamente do repositório do GitHub.
-
-### Executando com `uvx`
-
-Este comando irá baixar e executar o servidor em um ambiente isolado, passando o `CLIENT_ID` necessário como uma variável de ambiente.
+Execute o comando abaixo no seu terminal, substituindo `"seu-client-id-aqui"` pelo seu ID de Cliente.
 
 ```bash
 uvx --from https://github.com/NagosC/microsoftMCP.git microsoft-mcp
 ```
 
-Ao executar o comando, você precisará fornecer o `MICROSOFT_MCP_CLIENT_ID` que você obteve ao registrar o aplicativo no Azure.
+- **Para Ambientes de IA (como o Gemini):**
+  Você pode configurar a ferramenta para ser executada com o `CLIENT_ID` como uma variável de ambiente.
 
-```json
-{
-    "microsoft": {
-        "command": "uvx",
-        "args": [
-            "--from",
-            "https://github.com/NagosC/microsoftMCP.git",
-            "microsoft-mcp"
-        ],
-        "env": {
-            "MICROSOFT_MCP_CLIENT_ID": "seu-client-id-aqui"
-        }
-    }
-}
-```
+  ```json
+  {
+      "microsoft": {
+          "command": "uvx",
+          "args": [
+              "--from",
+              "https://github.com/NagosC/microsoftMCP.git",
+              "microsoft-mcp"
+          ],
+          "env": {
+              "MICROSOFT_MCP_CLIENT_ID": "seu-client-id-aqui"
+          }
+      }
+  }
+  ```
 
-### Autenticando uma Conta
+### Autenticação da Conta Microsoft
 
-Após iniciar o servidor, você precisará autenticar sua conta da Microsoft.
+Após iniciar o servidor, você precisa autorizar o acesso à sua conta Microsoft.
 
-1.  **Listar Contas**: Verifique as contas já autenticadas.
-    
-    ```bash
-    list_accounts()
-    ```
-    
-2.  **Iniciar Autenticação**: Comece o processo para adicionar uma nova conta.
-    
+1.  **Inicie a autenticação**:
     ```bash
     authenticate_account()
     ```
-    
-3.  **Código de Dispositivo**: O sistema fornecerá uma URL e um código.
-    
-    -   Abra a URL no seu navegador.
-    -   Insira o código fornecido.
-    -   Faça login com sua conta da Microsoft.
-    
-4.  **Completar Autenticação**: Finalize o processo usando o `flow_cache` retornado.
-    
+2.  **Código de Dispositivo**: O sistema fornecerá uma URL e um código.
+    - Abra a URL no seu navegador.
+    - Insira o código fornecido.
+    - Faça login com sua conta da Microsoft e aprove o acesso.
+3.  **Complete a autenticação**:
     ```bash
     complete_authentication(flow_cache="...")
     ```
-    
+    Use o `flow_cache` retornado pelo passo anterior.
 
-Com a conta autenticada, você pode usar as outras ferramentas para interagir com o SharePoint, OneDrive e Excel.
+Com a conta autenticada, você já pode usar todas as ferramentas disponíveis.
 
 ---
 
-## ⚡ Execução Direta do GitHub (Avançado)
+## 🧑‍💻 Para Desenvolvedores: Configuração Local
 
-Se você deseja executar o servidor sem clonar o repositório, pode usar uma ferramenta como o `pipx`. Isso é ideal para integrar o servidor a outros sistemas de forma rápida.
+Se você deseja modificar ou contribuir com o projeto, siga estes passos.
 
-### 1. Pré-requisito: Instalar o `pipx`
+### 1. Pré-requisitos
 
-Se você ainda não tem o `pipx`, instale-o com o pip:
+- **Python 3.10+**
+- **Poetry** (gerenciador de dependências)
+- Um **ID de Cliente (Client ID)** do Azure (veja o **Apêndice A**).
+
+### 2. Instalação
+
+1.  **Clone o repositório:**
+    ```bash
+    git clone https://github.com/NagosC/microsoftMCP.git
+    cd microsoftMCP
+    ```
+2.  **Instale as dependências:**
+    ```bash
+    poetry install
+    ```
+3.  **Crie um arquivo `.env`** na raiz do projeto e adicione seu Client ID:
+    ```env
+    # Cole o ID do Aplicativo (cliente) que você copiou do portal do Azure
+    GRAPH_CLIENT_ID="seu-client-id-aqui"
+    ```
+
+### 3. Autenticação Local
+
+Antes de iniciar o servidor, autentique sua conta Microsoft:
 
 ```bash
-pip install pipx
+poetry run python src/autentichate.py
 ```
 
-### 2. Executando o Servidor via `pipx`
+Siga as instruções no terminal para gerar o arquivo de token (`~/.microsoft_mcp_token_cache.json`).
 
-Use o comando abaixo para instalar e executar o servidor diretamente do repositório do GitHub. Certifique-se de definir a variável de ambiente `MICROSOFT_MCP_CLIENT_ID` na mesma linha.
+### 4. Executando o Servidor
+
+Inicie o servidor MCP em modo de desenvolvimento:
 
 ```bash
-# Substitua <URL_DO_SEU_REPOSITORIO> pela URL do seu repo no GitHub
-MICROSOFT_MCP_CLIENT_ID="seu-client-id-aqui" pipx run --spec git+<URL_DO_SEU_REPOSITORIO> microsoft-mcp
+poetry run python -m src.microsoft_mcp.server
 ```
 
-Isso fará com que o `pipx` baixe o código, instale as dependências em um ambiente virtual isolado e execute o ponto de entrada `microsoft-mcp` que definimos no `pyproject.toml`.
+### 5. Comandos Úteis
+
+- **Formatar código**: `poetry run black . && poetry run isort .`
+- **Checagem de tipos**: `poetry run mypy .`
+- **Rodar testes**: `poetry run pytest`
+
 ---
 
 ## 🛠️ Ferramentas Disponíveis (API)
 
 Aqui está a lista de ferramentas que o servidor expõe.
 
-### Autenticação
+*Nota: Todas as ferramentas aceitam um `account_id` opcional. Se omitido, a primeira conta autenticada será usada.*
 
-- **`list_accounts()`**: Lista todas as contas da Microsoft que já foram autenticadas.
-- **`authenticate_account()`**: Inicia um novo fluxo de autenticação de dispositivo.
-- **`complete_authentication(flow_cache: str)`**: Finaliza o processo de autenticação após o usuário inserir o código no navegador.
-
-### SharePoint e OneDrive
-
-- **`sharepoint_get_site(hostname: str, relative_path: str, account_id: str | None = None)`**: Obtém detalhes de um site do SharePoint.
-- **`sharepoint_list_drives(site_id: str, account_id: str | None = None)`**: Lista as bibliotecas de documentos (Drives) de um site.
-- **`sharepoint_list_files(drive_id: str, item_id: str | None = None, account_id: str | None = None)`**: Lista arquivos e pastas em um Drive ou pasta específica.
-- **`sharepoint_download_file(drive_id: str, item_id: str, account_id: str | None = None)`**: Baixa o conteúdo de um arquivo (retorna em base64).
-- **`sharepoint_upload_file(drive_id: str, parent_id: str, filename: str, content_b64: str, account_id: str | None = None)`**: Faz upload de um arquivo pequeno (< 4MB).
-
-### Excel
-
-- **`excel_list_worksheets(drive_id: str, item_id: str, account_id: str | None = None)`**: Lista todas as planilhas em um arquivo Excel.
-- **`excel_list_tables(drive_id: str, item_id: str, worksheet_name: str, account_id: str | None = None)`**: Lista todas as tabelas formatadas em uma planilha.
-- **`excel_read_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, account_id: str | None = None)`**: Lê dados de um intervalo (ex: "A1:C5" ou "NomeDaTabela").
-- **`excel_update_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, values: list[list], account_id: str | None = None)`**: Atualiza um intervalo de células com novos valores.
-- **`excel_add_table_row(drive_id: str, item_id: str, worksheet_name: str, table_name: str, values: list[list], account_id: str | None = None)`**: Adiciona uma ou mais linhas ao final de uma tabela.
-
-> **Nota**: Todas as ferramentas aceitam um parâmetro opcional `account_id: str` para especificar qual conta autenticada usar. Se não for fornecido, a primeira conta da lista será usada como padrão.
+| Ferramenta | Descrição |
+| --- | --- |
+| **`list_accounts()`** | Lista todas as contas da Microsoft autenticadas. |
+| **`authenticate_account()`** | Inicia um novo fluxo de autenticação de dispositivo. |
+| **`complete_authentication(flow_cache)`** | Finaliza o processo de autenticação. |
+| **`sharepoint_get_site(hostname, relative_path)`** | Obtém detalhes de um site do SharePoint. |
+| **`sharepoint_list_drives(site_id)`** | Lista as bibliotecas de documentos (Drives) de um site. |
+| **`sharepoint_list_files(drive_id, item_id)`** | Lista arquivos e pastas em um Drive ou pasta. |
+| **`sharepoint_download_file(drive_id, item_id)`** | Baixa o conteúdo de um arquivo (retorna em base64). |
+| **`sharepoint_upload_file(drive_id, parent_id, filename, content_b64)`** | Faz upload de um arquivo pequeno (< 4MB). |
+| **`excel_list_worksheets(drive_id, item_id)`** | Lista todas as planilhas em um arquivo Excel. |
+| **`excel_list_tables(drive_id, item_id, worksheet_name)`** | Lista todas as tabelas formatadas em uma planilha. |
+| **`excel_read_range(drive_id, item_id, worksheet_name, range_address)`** | Lê dados de um intervalo (ex: "A1:C5"). |
+| **`excel_update_range(drive_id, item_id, worksheet_name, range_address, values)`** | Atualiza um intervalo de células. |
+| **`excel_add_table_row(drive_id, item_id, worksheet_name, table_name, values)`** | Adiciona uma ou mais linhas a uma tabela. |
 
 ---
 
-## 🧑‍💻 Desenvolvimento
+## Apêndice A: Registro de Aplicativo no Azure AD
 
-Para manter a qualidade do código, utilize as seguintes ferramentas:
+Para obter um **ID de Cliente (Client ID)**, você precisa registrar um aplicativo no Azure Active Directory.
 
-```bash
-# Formatar o código
-poetry run black .
-poetry run isort .
-
-# Checagem de tipos estática
-poetry run mypy .
-
-# Rodar testes
-poetry run pytest
-```
+1.  Acesse o **portal do Azure** e navegue até **Azure Active Directory**.
+2.  Vá para **Registros de aplicativo** e clique em **Novo registro**.
+3.  Dê um nome ao seu aplicativo (ex: `My-MCP-Server`).
+4.  Em **Tipos de conta com suporte**, selecione **Contas em qualquer diretório organizacional... e contas pessoais da Microsoft...**.
+5.  Vá para a guia **Autenticação**, clique em **Adicionar uma plataforma** e selecione **Aplicativos móveis e de desktop**.
+6.  Marque a caixa de seleção para `https://login.microsoftonline.com/common/oauth2/nativeclient`.
+7.  Ainda em **Autenticação**, ative a opção **Permitir fluxos de cliente público**.
+8.  Vá para **Permissões de API** e adicione as seguintes permissões **delegadas**:
+    - `Files.ReadWrite.All`
+    - `Sites.ReadWrite.All`
+    - `User.Read`
+    - `offline_access`
+9.  Na página de **Visão geral** do seu aplicativo, copie o **ID do aplicativo (cliente)**. Este é o seu `GRAPH_CLIENT_ID`.
