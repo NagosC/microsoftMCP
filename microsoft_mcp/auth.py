@@ -34,10 +34,10 @@ def get_client_id() -> str:
     """
     Retrieves the Client ID from environment variables or a cached config file.
     Priority:
-    1. MICROSOFT_MCP_CLIENT_ID environment variable.
+    1. GRAPH_CLIENT_ID environment variable.
     2. 'client_id' field in ~/.microsoft-mcp/config.json.
     """
-    client_id = os.getenv("MICROSOFT_MCP_CLIENT_ID")
+    client_id = os.getenv("GRAPH_CLIENT_ID")
     if client_id:
         return client_id
 
@@ -48,7 +48,7 @@ def get_client_id() -> str:
         if client_id:
             return client_id
 
-    raise ValueError("MICROSOFT_MCP_CLIENT_ID is not set as an environment variable or configured via the 'set_client_id' tool.")
+    raise ValueError("GRAPH_CLIENT_ID is not set as an environment variable or configured via the 'set_client_id' tool.")
 
 
 def get_app() -> msal.PublicClientApplication:
