@@ -26,3 +26,4 @@ build-backend = "poetry.core.main"
 
 [tool.poetry.scripts]
 microsoft-mcp = "microsoft_mcp.server:main"
+microsoft-mcp-auth = "autentichate:main"
