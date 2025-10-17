@@ -155,6 +155,41 @@ def sharepoint_get_site(
 
 
 @mcp.tool
+def sharepoint_get_site_by_url(
+    url: str | None = None, account_id: str | None = None
+) -> dict[str, Any] | None:
+    """Gets a SharePoint site by its full URL.
+    The URL can be passed as an argument or set as the SHAREPOINT_SITE_URL environment variable.
+
+    Args:
+        url: The full URL of the SharePoint site (e.g., 'https://contoso.sharepoint.com/sites/MySite').
+        account_id: The ID of the account to use. Uses the default account if not provided.
+
+    Returns:
+        A dictionary containing the site's properties, or None if not found.
+    """
+    from urllib.parse import urlparse
+
+    # If URL is not provided, try to get it from environment variable
+    if not url:
+        url = os.getenv("SHAREPOINT_SITE_URL")
+
+    if not url:
+        raise ValueError("SharePoint URL not provided. Pass it as an argument or set the SHAREPOINT_SITE_URL environment variable.")
+
+    parsed_url = urlparse(url)
+    hostname = parsed_url.hostname
+    relative_path = parsed_url.path
+
+    if not hostname or not relative_path:
+        raise ValueError(f"Invalid SharePoint URL provided: {url}. Could not parse hostname or path.")
+
+    return graph.get_site(
+        hostname=hostname, relative_path=relative_path, account_id=account_id
+    )
+
+
+@mcp.tool
 def sharepoint_list_drives(
     site_id: str, account_id: str | None = None
 ) -> list[dict[str, Any]]:
