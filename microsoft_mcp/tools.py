@@ -95,15 +95,12 @@ def complete_authentication(flow_cache: str) -> dict[str, str]:
             }
         raise Exception(f"Authentication failed: {error_msg}")
 
-    # Save the token cache
     cache = app.token_cache
     if isinstance(cache, auth.msal.SerializableTokenCache) and cache.has_state_changed:
         auth._write_cache(cache.serialize())
 
-    # Get the newly added account
     accounts = app.get_accounts()
     if accounts:
-        # Find the account that matches the token we just got
         for account in accounts:
             if (
                 account.get("username", "").lower()
@@ -117,7 +114,6 @@ def complete_authentication(flow_cache: str) -> dict[str, str]:
                     "account_id": account["home_account_id"],
                     "message": f"Successfully authenticated {account['username']}",
                 }
-        # If exact match not found, return the last account
         account = accounts[-1]
         return {
             "status": "success",
@@ -132,45 +128,21 @@ def complete_authentication(flow_cache: str) -> dict[str, str]:
     }
 
 
-# --- SharePoint/Drive Tools ---
-
-
 @mcp.tool
-def sharepoint_get_site(
-    hostname: str, relative_path: str, account_id: str | None = None
+async def sharepoint_get_site(
+    hostname: str, relative_path: str, account_id: str | None = None, timeout: float = 30.0
 ) -> dict[str, Any] | None:
-    """Gets a SharePoint site by its hostname and relative server path.
-
-    Args:
-        hostname: The hostname of the SharePoint site (e.g., 'contoso.sharepoint.com').
-        relative_path: The relative path to the site (e.g., '/sites/MySite').
-        account_id: The ID of the account to use. Uses the default account if not provided.
-
-    Returns:
-        A dictionary containing the site's properties, or None if not found.
-    """
-    return graph.get_site(
-        hostname=hostname, relative_path=relative_path, account_id=account_id
+    return await graph.get_site(
+        hostname=hostname, relative_path=relative_path, account_id=account_id, timeout=timeout
     )
 
 
 @mcp.tool
-def sharepoint_get_site_by_url(
-    url: str | None = None, account_id: str | None = None
+async def sharepoint_get_site_by_url(
+    url: str | None = None, account_id: str | None = None, timeout: float = 30.0
 ) -> dict[str, Any] | None:
-    """Gets a SharePoint site by its full URL.
-    The URL can be passed as an argument or set as the SHAREPOINT_SITE_URL environment variable.
-
-    Args:
-        url: The full URL of the SharePoint site (e.g., 'https://contoso.sharepoint.com/sites/MySite').
-        account_id: The ID of the account to use. Uses the default account if not provided.
-
-    Returns:
-        A dictionary containing the site's properties, or None if not found.
-    """
     from urllib.parse import urlparse
 
-    # If URL is not provided, try to get it from environment variable
     if not url:
         url = os.getenv("SHAREPOINT_SITE_URL")
 
@@ -184,43 +156,24 @@ def sharepoint_get_site_by_url(
     if not hostname or not relative_path:
         raise ValueError(f"Invalid SharePoint URL provided: {url}. Could not parse hostname or path.")
 
-    return graph.get_site(
-        hostname=hostname, relative_path=relative_path, account_id=account_id
+    return await graph.get_site(
+        hostname=hostname, relative_path=relative_path, account_id=account_id, timeout=timeout
     )
 
 
 @mcp.tool
-def sharepoint_list_drives(
-    site_id: str, account_id: str | None = None
+async def sharepoint_list_drives(
+    site_id: str, account_id: str | None = None, timeout: float = 30.0
 ) -> list[dict[str, Any]]:
-    """Lists all Document Libraries (Drives) in a given SharePoint site.
-
-    Args:
-        site_id: The ID of the SharePoint site.
-        account_id: The ID of the account to use. Uses the default account if not provided.
-
-    Returns:
-        A list of drives, where each drive is a dictionary of its properties.
-    """
-    return graph.get_drives(site_id=site_id, account_id=account_id)
+    return await graph.get_drives(site_id=site_id, account_id=account_id, timeout=timeout)
 
 
 @mcp.tool
-def sharepoint_list_files(
-    drive_id: str, item_id: str | None = None, account_id: str | None = None
+async def sharepoint_list_files(
+    drive_id: str, item_id: str | None = None, account_id: str | None = None, timeout: float = 30.0
 ) -> list[dict[str, Any]]:
-    """Lists files and folders in a SharePoint drive or a specific folder.
-
-    Args:
-        drive_id: The ID of the drive.
-        item_id: The ID of the folder to list items from. If None, lists from the root.
-        account_id: The ID of the account to use. Uses the default account if not provided.
-
-    Returns:
-        A list of items, where each item is a dictionary of its properties.
-    """
-    items = graph.list_drive_items(
-        drive_id=drive_id, item_id=item_id, account_id=account_id
+    items = await graph.list_drive_items(
+        drive_id=drive_id, item_id=item_id, account_id=account_id, timeout=timeout
     )
     return [
         {
@@ -236,55 +189,29 @@ def sharepoint_list_files(
 
 
 @mcp.tool
-def sharepoint_download_file(
-    drive_id: str, item_id: str, account_id: str | None = None
+async def sharepoint_download_file(
+    drive_id: str, item_id: str, account_id: str | None = None, timeout: float = 60.0
 ) -> str:
-    """Downloads a file from a SharePoint drive and returns its content as a base64 encoded string.
-
-    Args:
-        drive_id: The ID of the drive containing the file.
-        item_id: The ID of the file to download.
-        account_id: The ID of the account to use. Uses the default account if not provided.
-
-    Returns:
-        The content of the file, base64 encoded.
-    """
-    content = graph.download_file(
-        drive_id=drive_id, item_id=item_id, account_id=account_id
+    content = await graph.download_file(
+        drive_id=drive_id, item_id=item_id, account_id=account_id, timeout=timeout
     )
     return base64.b64encode(content).decode("utf-8") if content else ""
 
 
 @mcp.tool
-def sharepoint_upload_file(
-    drive_id: str, parent_id: str, filename: str, content_b64: str, account_id: str | None = None
+async def sharepoint_upload_file(
+    drive_id: str, parent_id: str, filename: str, content_b64: str, account_id: str | None = None, timeout: float = 30.0
 ) -> dict[str, Any] | None:
-    """Uploads a file to a SharePoint drive. The file content must be base64 encoded.
-    For small files only (< 4MB).
-    """
     data = base64.b64decode(content_b64)
-    return graph.upload_small_file(drive_id, parent_id, filename, data, account_id)
-
-
-# --- Excel Tools ---
+    return await graph.upload_small_file(drive_id, parent_id, filename, data, account_id, timeout=timeout)
 
 
 @mcp.tool
-def excel_list_worksheets(
-    drive_id: str, item_id: str, account_id: str | None = None
+async def excel_list_worksheets(
+    drive_id: str, item_id: str, account_id: str | None = None, timeout: float = 30.0
 ) -> list[dict[str, Any]]:
-    """Lists all worksheets in an Excel file located on SharePoint/OneDrive.
-
-    Args:
-        drive_id: The ID of the drive containing the Excel file.
-        item_id: The ID of the Excel file item.
-        account_id: The ID of the account to use. Uses the default account if not provided.
-
-    Returns:
-        A list of worksheets, each with its name and visibility status.
-    """
-    worksheets = graph.get_excel_worksheets(
-        drive_id=drive_id, item_id=item_id, account_id=account_id
+    worksheets = await graph.get_excel_worksheets(
+        drive_id=drive_id, item_id=item_id, account_id=account_id, timeout=timeout
     )
     return [
         {"name": ws["name"], "visibility": ws["visibility"]} for ws in worksheets
@@ -292,67 +219,41 @@ def excel_list_worksheets(
 
 
 @mcp.tool
-def excel_read_range(
+async def excel_read_range(
     drive_id: str,
     item_id: str,
     worksheet_name: str,
     range_address: str,
     account_id: str | None = None,
+    timeout: float = 30.0,
 ) -> dict[str, Any] | None:
-    """Reads data from a specified range in an Excel worksheet (e.g., 'A1:C3' or 'MyTable').
-
-    Args:
-        drive_id: The ID of the drive containing the Excel file.
-        item_id: The ID of the Excel file item.
-        worksheet_name: The name of the worksheet.
-        range_address: The range to read from (e.g., 'A1:C3', 'Sheet1!A1:C3', or a table name).
-        account_id: The ID of the account to use. Uses the default account if not provided.
-
-    Returns:
-        A dictionary containing the values, text, and formulas from the specified range.
-    """
-    return graph.get_excel_range(
-        drive_id, item_id, worksheet_name, range_address, account_id
+    return await graph.get_excel_range(
+        drive_id, item_id, worksheet_name, range_address, account_id, timeout=timeout
     )
 
 
 @mcp.tool
-def excel_update_range(
-    drive_id: str, item_id: str, worksheet_name: str, range_address: str, values: list[list[Any]], account_id: str | None = None
+async def excel_update_range(
+    drive_id: str, item_id: str, worksheet_name: str, range_address: str, values: list[list[Any]], account_id: str | None = None, timeout: float = 30.0
 ) -> dict[str, Any] | None:
-    """Updates a range in an Excel worksheet with the given values. The 'values' should be a 2D list."""
-    return graph.update_excel_range(drive_id, item_id, worksheet_name, range_address, values, account_id)
+    return await graph.update_excel_range(drive_id, item_id, worksheet_name, range_address, values, account_id, timeout=timeout)
 
 
 @mcp.tool
-def excel_list_tables(
-    drive_id: str, item_id: str, worksheet_name: str, account_id: str | None = None
+async def excel_list_tables(
+    drive_id: str, item_id: str, worksheet_name: str, account_id: str | None = None, timeout: float = 30.0
 ) -> list[dict[str, Any]]:
-    """Lists all tables in a specific Excel worksheet.
-
-    Args:
-        drive_id: The ID of the drive containing the Excel file.
-        item_id: The ID of the Excel file item.
-        worksheet_name: The name of the worksheet to list tables from.
-        account_id: The ID of the account to use. Uses the default account if not provided.
-
-    Returns:
-        A list of tables, where each table is a dictionary of its properties.
-    """
-    return graph.get_excel_tables(drive_id, item_id, worksheet_name, account_id)
+    return await graph.get_excel_tables(drive_id, item_id, worksheet_name, account_id, timeout=timeout)
 
 
 @mcp.tool
-def excel_add_table_row(
+async def excel_add_table_row(
     drive_id: str,
     item_id: str,
     worksheet_name: str,
     table_name: str,
     values: list[list[Any]],
     account_id: str | None = None,
+    timeout: float = 30.0,
 ) -> dict[str, Any] | None:
-    """Adds one or more rows to the end of a specified table in an Excel worksheet.
-
-    The 'values' argument must be a 2D list (a list of lists), where each inner list represents a row to be added.
-    """
-    return graph.add_excel_table_row(drive_id, item_id, worksheet_name, table_name, values, account_id)
+    return await graph.add_excel_table_row(drive_id, item_id, worksheet_name, table_name, values, account_id, timeout=timeout)

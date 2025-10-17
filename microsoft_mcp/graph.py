@@ -1,29 +1,29 @@
 import httpx
-import time
+import asyncio
 import logging
 from typing import Any
-from .auth import get_token, Account
+from .auth import get_token
 
 BASE_URL = "https://graph.microsoft.com/v1.0"
-# 15 x 320 KiB = 4,915,200 bytes
 UPLOAD_CHUNK_SIZE = 15 * 320 * 1024
 
 logger = logging.getLogger(__name__)
 
 
-def request(
+async def request(
     method: str,
     path: str,
     account_id: str | None = None,
     params: dict[str, Any] | None = None,
     json: dict[str, Any] | None = None,
     data: bytes | None = None,
+    timeout: float = 30.0,
     max_retries: int = 3,
 ) -> dict[str, Any] | None:
     """
     Makes a request to the Microsoft Graph API with authentication and retry logic.
     """
-    with httpx.Client(timeout=30.0, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
         headers = {
             "Authorization": f"Bearer {get_token(account_id)}",
         }
@@ -45,7 +45,7 @@ def request(
 
         for attempt in range(max_retries + 1):
             try:
-                response = client.request(
+                response = await client.request(
                     method=method,
                     url=f"{BASE_URL}{path}",
                     headers=headers,
@@ -54,14 +54,13 @@ def request(
                     content=data,
                 )
 
-                # Handle rate limiting
                 if response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", "5"))
                     if attempt < max_retries:
                         logger.warning(
                             f"Rate limited. Retrying after {retry_after} seconds."
                         )
-                        time.sleep(min(retry_after, 60))
+                        await asyncio.sleep(min(retry_after, 60))
                         continue
 
                 response.raise_for_status()
@@ -77,18 +76,18 @@ def request(
                 is_transport_error = isinstance(e, httpx.TransportError)
 
                 if (is_server_error or is_transport_error) and attempt < max_retries:
-                    wait_time = (2**attempt) * 1  # Exponential backoff
+                    wait_time = (2**attempt) * 1
                     logger.warning(
                         f"Request failed (attempt {attempt + 1}/{max_retries + 1}). Retrying in {wait_time}s. Error: {e}"
                     )
-                    time.sleep(wait_time)
+                    await asyncio.sleep(wait_time)
                     continue
-                raise  # Re-raise the exception if max retries are exceeded
+                raise
 
     return None
 
 
-def _paginated_request(path: str, account_id: str | None) -> list[dict[str, Any]]:
+async def _paginated_request(path: str, account_id: str | None, timeout: float = 30.0) -> list[dict[str, Any]]:
     """
     Handles paginated requests to the Graph API.
     """
@@ -96,13 +95,13 @@ def _paginated_request(path: str, account_id: str | None) -> list[dict[str, Any]
     next_url = path
 
     while next_url:
-        # For subsequent requests, the URL is absolute and includes the base URL
         path_to_request = next_url if next_url.startswith(BASE_URL) else f"{BASE_URL}{next_url}"
         
-        response = request(
+        response = await request(
             "GET",
-            path_to_request.replace(BASE_URL, ""), # request function adds BASE_URL
-            account_id=account_id
+            path_to_request.replace(BASE_URL, ""),
+            account_id=account_id,
+            timeout=timeout
         )
 
         if response and "value" in response:
@@ -114,86 +113,58 @@ def _paginated_request(path: str, account_id: str | None) -> list[dict[str, Any]
     return results
 
 
-# --- SharePoint/Drive Functions ---
-
-def get_site(hostname: str, relative_path: str, account_id: str | None = None) -> dict[str, Any] | None:
-    """
-    Gets a SharePoint site by its hostname and relative server path.
-    e.g., get_site("contoso.sharepoint.com", "/sites/MySite")
-    """
-    path = f"/sites/{hostname}:{relative_path}"
-    return request("GET", path, account_id=account_id)
+async def get_site(hostname: str, relative_path: str, account_id: str | None = None, timeout: float = 30.0) -> dict[str, Any] | None:
+    path = f"/sites/{hostname}:/{relative_path}"
+    return await request("GET", path, account_id=account_id, timeout=timeout)
 
 
-def get_drives(site_id: str, account_id: str | None = None) -> list[dict[str, Any]]:
-    """
-    Lists all Document Libraries (Drives) in a given SharePoint site.
-    """
+async def get_drives(site_id: str, account_id: str | None = None, timeout: float = 30.0) -> list[dict[str, Any]]:
     path = f"/sites/{site_id}/drives"
-    return _paginated_request(path, account_id)
+    return await _paginated_request(path, account_id, timeout=timeout)
 
 
-def list_drive_items(drive_id: str, item_id: str | None = None, account_id: str | None = None) -> list[dict[str, Any]]:
-    """
-    Lists items in a drive's root or in a specific folder (item_id).
-    """
+async def list_drive_items(drive_id: str, item_id: str | None = None, account_id: str | None = None, timeout: float = 30.0) -> list[dict[str, Any]]:
     if item_id:
         path = f"/drives/{drive_id}/items/{item_id}/children"
     else:
         path = f"/drives/{drive_id}/root/children"
-    return _paginated_request(path, account_id)
+    return await _paginated_request(path, account_id, timeout=timeout)
 
 
-# --- Excel Functions ---
-
-def get_excel_worksheets(drive_id: str, item_id: str, account_id: str | None = None) -> list[dict[str, Any]]:
-    """
-    Lists all worksheets in an Excel file.
-    """
+async def get_excel_worksheets(drive_id: str, item_id: str, account_id: str | None = None, timeout: float = 30.0) -> list[dict[str, Any]]:
     path = f"/drives/{drive_id}/items/{item_id}/workbook/worksheets"
-    return _paginated_request(path, account_id)
+    return await _paginated_request(path, account_id, timeout=timeout)
 
 
-def get_excel_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, account_id: str | None = None) -> dict[str, Any] | None:
-    """
-    Gets data from a specified range in an Excel worksheet.
-    e.g., get_excel_range(..., "Sheet1", "A1:C3")
-    """
+async def get_excel_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, account_id: str | None = None, timeout: float = 30.0) -> dict[str, Any] | None:
     path = f"/drives/{drive_id}/items/{item_id}/workbook/worksheets/{worksheet_name}/range(address='{range_address}')"
-    return request("GET", path, account_id=account_id)
+    return await request("GET", path, account_id=account_id, timeout=timeout)
 
 
-def update_excel_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, values: list[list[Any]], account_id: str | None = None) -> dict[str, Any] | None:
-    """
-    Updates a range in an Excel worksheet with the given values.
-    """
+async def update_excel_range(drive_id: str, item_id: str, worksheet_name: str, range_address: str, values: list[list[Any]], account_id: str | None = None, timeout: float = 30.0) -> dict[str, Any] | None:
     path = f"/drives/{drive_id}/items/{item_id}/workbook/worksheets/{worksheet_name}/range(address='{range_address}')"
     json_data = {"values": values}
-    return request("PATCH", path, account_id=account_id, json=json_data)
+    return await request("PATCH", path, account_id=account_id, json=json_data, timeout=timeout)
 
 
-# --- File Download/Upload Functions ---
+async def add_excel_table_row(drive_id: str, item_id: str, worksheet_name: str, table_name: str, values: list[list[Any]], account_id: str | None = None, timeout: float = 30.0) -> dict[str, Any] | None:
+    path = f"/drives/{drive_id}/items/{item_id}/workbook/worksheets/{worksheet_name}/tables/{table_name}/rows/add"
+    json_data = {"values": values}
+    return await request("POST", path, account_id=account_id, json=json_data, timeout=timeout)
 
-def download_file(drive_id: str, item_id: str, account_id: str | None = None) -> bytes | None:
-    """
-    Downloads the content of a file from a drive.
-    """
+
+async def download_file(drive_id: str, item_id: str, account_id: str | None = None, timeout: float = 60.0) -> bytes | None:
     path = f"/drives/{drive_id}/items/{item_id}/content"
-    # This endpoint returns raw content, not JSON, so we need a custom request.
-    with httpx.Client(timeout=60.0, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
         headers = {"Authorization": f"Bearer {get_token(account_id)}"}
-        response = client.get(f"{BASE_URL}{path}", headers=headers)
+        response = await client.get(f"{BASE_URL}{path}", headers=headers)
         response.raise_for_status()
         return response.content
 
 
-def upload_small_file(drive_id: str, parent_id: str, filename: str, data: bytes, account_id: str | None = None) -> dict[str, Any] | None:
-    """
-    Uploads a small file (under 4MB) to a specific folder in a drive.
-    Use 'root' for parent_id to upload to the root folder.
-    """
+async def upload_small_file(drive_id: str, parent_id: str, filename: str, data: bytes, account_id: str | None = None, timeout: float = 30.0) -> dict[str, Any] | None:
     if len(data) > 4 * 1024 * 1024:
         raise ValueError("File is larger than 4MB. Use upload_large_file instead.")
 
     path = f"/drives/{drive_id}/items/{parent_id}:/{filename}:/content"
-    return request("PUT", path, account_id=account_id, data=data)
+    return await request("PUT", path, account_id=account_id, data=data, timeout=timeout)
