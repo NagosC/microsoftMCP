@@ -34,12 +34,14 @@ def list_accounts() -> list[dict[str, str]]:
 
 @mcp.tool
 def authenticate_account() -> dict[str, str]:
-    """Authenticate a new Microsoft account using device flow.
+    """Initiates a device flow authentication and returns the URL and code.
 
-    This tool initiates a device flow authentication process. It will print a URL
-    and a code to the console. The user must open the URL in a browser, enter
-    the code, and sign in to their Microsoft account. The tool will wait for
-    the authentication to complete and then return the account information.
+    This tool initiates a device flow authentication process. It returns a URL
+    and a code. The user must open the URL in a browser, enter the code, and
+    sign in to their Microsoft account.
+
+    After the user authenticates, the application will have access to the
+    account. You can verify by calling the `list_accounts` tool.
     """
     app = auth.get_app()
     flow = app.initiate_device_flow(scopes=auth.SCOPES)
@@ -53,44 +55,28 @@ def authenticate_account() -> dict[str, str]:
         flow.get("verification_url", "https://microsoft.com/devicelogin"),
     )
 
-    print(f"To authenticate, visit: {verification_url} and enter code: {flow['user_code']}")
+    # To provide feedback, we can start a thread to wait for the auth to complete.
+    import threading
 
-    result = app.acquire_token_by_device_flow(flow)
+    def wait_for_auth():
+        result = app.acquire_token_by_device_flow(flow)
+        if "error" in result:
+            print(f"Authentication failed: {result.get('error_description', result['error'])}")
+        else:
+            cache = app.token_cache
+            if isinstance(cache, auth.msal.SerializableTokenCache) and cache.has_state_changed:
+                auth._write_cache(cache.serialize())
+            print("Authentication successful!")
 
-    if "error" in result:
-        error_msg = result.get("error_description", result["error"])
-        raise Exception(f"Authentication failed: {error_msg}")
-
-    cache = app.token_cache
-    if isinstance(cache, auth.msal.SerializableTokenCache) and cache.has_state_changed:
-        auth._write_cache(cache.serialize())
-
-    accounts = app.get_accounts()
-    if accounts:
-        for account in accounts:
-            if (
-                account.get("username", "").lower()
-                == result.get("id_token_claims", {})
-                .get("preferred_username", "")
-                .lower()
-            ):
-                return {
-                    "status": "success",
-                    "username": account["username"],
-                    "account_id": account["home_account_id"],
-                    "message": f"Successfully authenticated {account['username']}",
-                }
-        account = accounts[-1]
-        return {
-            "status": "success",
-            "username": account["username"],
-            "account_id": account["home_account_id"],
-            "message": f"Successfully authenticated {account['username']}",
-        }
+    auth_thread = threading.Thread(target=wait_for_auth)
+    auth_thread.daemon = True
+    auth_thread.start()
 
     return {
-        "status": "error",
-        "message": "Authentication succeeded but no account was found",
+        "status": "pending",
+        "message": "Authentication initiated. Please follow the instructions.",
+        "verification_url": verification_url,
+        "user_code": flow["user_code"],
     }
 
 
